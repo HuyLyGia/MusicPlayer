@@ -19,12 +19,16 @@ const cdThump = $('.cd-thumb');
 const audio = $('#audio');
 const player = $('.player');
 const playBtn = $('.btn-toggle-play');
+//Using div block
+// const progressArea = $('.progress-area'); 
+// const progressBar = $('.progress-bar');
+//Using input range
+const progress = $('#progress');
 
 
 const app = {
     curentIndex: 0,
     isPlaying: false,
-    isRandom: false,
     isRepeat: false,
     isNext: false,
     isPrev: false,
@@ -122,8 +126,18 @@ const app = {
     //Handle Events
     handleEvents: function () {
         const _this = this; //assign _this equal to this(app)
-        //Zoom in/out the cd when scrolled
         const cdWidth = $('.cd').offsetWidth;
+
+        //Handle cd rotation
+        const cdThumpAnimate = cd.animate([
+            {transform: 'rotate(360deg)'}
+        ], {
+            duration: 10000,
+            iterations: Infinity
+        })
+        cdThumpAnimate.pause();
+        
+        //Zoom in/out the cd when scrolled
         document.onscroll = function () {
             const scrollTop = window.scrollY
                 || document.documentElement.scrollTop;// Get values ​​from scrolling
@@ -146,13 +160,46 @@ const app = {
             audio.onplay = function () {
                 _this.isPlaying = true;
                 player.classList.add('playing');
+                cdThumpAnimate.play();
             }
             //Listen events when play button is paused
             audio.onpause = function () {
                 _this.isPlaying = false;
                 player.classList.remove('playing');
+                cdThumpAnimate.pause();
             }
         }
+
+        //Using div block
+        // audio.ontimeupdate = function () {
+        //     if (audio.duration) {
+        //         const percent = (audio.currentTime / audio.duration) * 100;
+        //         progressBar.style.width = `${percent}%`;
+        //     }
+        // }
+        // progressArea.addEventListener('click', function (e) {
+        //     const progressAreaWidth = progressArea.clientWidth;
+        //     const progressBarClick = e.offsetX;
+        //     const songDuration = audio.duration;
+        //     audio.currentTime = (progressBarClick / progressAreaWidth) * songDuration
+        // })
+        //Using input range
+        //Progress bar runs parallel to the song 
+        audio.ontimeupdate = function () {
+            if (audio.duration) {
+
+                //Calculate percentage of progress bar
+                let percent = Math.floor((audio.currentTime / audio.duration) * 100);
+                progress.value = percent;
+            }   
+        }
+        //Song rewind
+        progress.onchange = function () {
+            //Calculate seconds of progress bar
+            let seekTimes = audio.duration / 100 * progress.value;
+            audio.currentTime = seekTimes; // Set seek times to current time
+            console.log(audio.currentTime = seekTimes)
+        };
     },
 
     loadCurrentSong: function () {
