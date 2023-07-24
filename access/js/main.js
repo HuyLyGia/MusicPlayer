@@ -4,7 +4,7 @@
         * 3. Play / Pause / Seek
         * 4. CD rotate
         * 5. Next / Prev
-        * 6. Random
+        * 6. Random / Repeat
         * 7. Next / Repeat when ended
         * 8. Active song
         * 9. Scroll active song into view
@@ -19,6 +19,9 @@ const cdThump = $('.cd-thumb');
 const audio = $('#audio');
 const player = $('.player');
 const playBtn = $('.btn-toggle-play');
+const nextBtn = $('.btn-next');
+const prevBtn = $('.btn-prev');
+const randomBtn = $('.btn-random');
 //Using div block
 // const progressArea = $('.progress-area'); 
 // const progressBar = $('.progress-bar');
@@ -27,11 +30,9 @@ const progress = $('#progress');
 
 
 const app = {
-    curentIndex: 0,
+    currentIndex: 0,
     isPlaying: false,
-    isRepeat: false,
-    isNext: false,
-    isPrev: false,
+    isRandom: false,
     songs: [
         {
             name: 'Save',
@@ -119,34 +120,33 @@ const app = {
     defineProperties: function () {
         Object.defineProperty(this, 'currentSong', {
             get: function () {
-                return this.songs[this.curentIndex];
+                return this.songs[this.currentIndex];
             },
         });
     },
-    //Handle Events
-    handleEvents: function () {
+    _handleEvents: function () {
         const _this = this; //assign _this equal to this(app)
         const cdWidth = $('.cd').offsetWidth;
 
         //Handle cd rotation
         const cdThumpAnimate = cd.animate([
-            {transform: 'rotate(360deg)'}
+            { transform: 'rotate(360deg)' }
         ], {
             duration: 10000,
             iterations: Infinity
-        })
+        });
         cdThumpAnimate.pause();
-        
+
         //Zoom in/out the cd when scrolled
         document.onscroll = function () {
             const scrollTop = window.scrollY
-                || document.documentElement.scrollTop;// Get values ​​from scrolling
-            const newCdWidth = cdWidth - scrollTop;// Calculate new cd width
+                || document.documentElement.scrollTop; // Get values ​​from scrolling
+            const newCdWidth = cdWidth - scrollTop; // Calculate new cd width
 
-            cd.style.width = newCdWidth > 0 ? newCdWidth + 'px' : 0;// if it's negative then it's 0
+            cd.style.width = newCdWidth > 0 ? newCdWidth + 'px' : 0; // if it's negative then it's 0
 
-            cd.style.opacity = newCdWidth / cdWidth;// Calculate opacity
-        }
+            cd.style.opacity = newCdWidth / cdWidth; // Calculate opacity
+        };
 
         //Handle events when click play button
         playBtn.onclick = function () {
@@ -155,20 +155,20 @@ const app = {
             } else {
                 audio.play();
             }
+        };
 
-            //Listen events when play button is played
-            audio.onplay = function () {
-                _this.isPlaying = true;
-                player.classList.add('playing');
-                cdThumpAnimate.play();
-            }
-            //Listen events when play button is paused
-            audio.onpause = function () {
-                _this.isPlaying = false;
-                player.classList.remove('playing');
-                cdThumpAnimate.pause();
-            }
-        }
+        //Listen events when play button is played
+        audio.onplay = function () {
+            _this.isPlaying = true;
+            player.classList.add('playing');
+            cdThumpAnimate.play();
+        };
+        //Listen events when play button is paused
+        audio.onpause = function () {
+            _this.isPlaying = false;
+            player.classList.remove('playing');
+            cdThumpAnimate.pause();
+        };
 
         //Using div block
         // audio.ontimeupdate = function () {
@@ -187,36 +187,118 @@ const app = {
         //Progress bar runs parallel to the song 
         audio.ontimeupdate = function () {
             if (audio.duration) {
-
-                //Calculate percentage of progress bar
-                let percent = Math.floor((audio.currentTime / audio.duration) * 100);
+                let percent = Math.floor((audio.currentTime / audio.duration) * 100); //Calculate percentage of progress bar
                 progress.value = percent;
-            }   
-        }
+            }
+        };
         //Song rewind
         progress.onchange = function () {
-            //Calculate seconds of progress bar
-            let seekTimes = audio.duration / 100 * progress.value;
+            let seekTimes = audio.duration / 100 * progress.value; //Calculate seconds of progress bar
             audio.currentTime = seekTimes; // Set seek times to current time
-            console.log(audio.currentTime = seekTimes)
         };
+
+        //Handle events when click next button
+        nextBtn.onclick = function () {
+            if (_this.isRandom) {
+                _this.playRandomSong();
+            } else {
+                _this.nextSong();
+            }
+            nextBtn.classList.add('active');
+            setTimeout(function () {
+                nextBtn.classList.remove('active');
+            }, 300);
+            audio.play();
+        };
+        //Handle events when click prev button
+        prevBtn.onclick = function () {
+            if (_this.isRandom) {
+                _this.playRandomSong();
+            } else {
+                _this.prevSong();
+            }
+            prevBtn.classList.add('active');
+            setTimeout(function () {
+                prevBtn.classList.remove('active');
+            }, 300);
+            audio.play();
+        };
+        //Handle events when click random button
+        randomBtn.onclick = function () {
+            //Solution 1
+            // if (_this.isRandom) {
+            //     randomBtn.classList.remove('active');
+            //     _this.isRandom = false;
+            // } else {
+            //     randomBtn.classList.add('active');
+            //     _this.isRandom = true;
+            // }
+            //Solution 2
+            _this.isRandom = !_this.isRandom;
+            randomBtn.classList.toggle('active', _this.isRandom);
+        };
+        //Handle events when the song ended
+        audio.onended = function () {
+            //Solution 1: Write another function to assign to the nextBtn.onclick event
+            //Then call that fucntion right here
+            //Soltion 2
+            nextBtn.click();//Auto click when the song ends
+        };
+
+    },
+    get handleEvents_1() {
+        return this._handleEvents;
+    },
+    set handleEvents_1(value) {
+        this._handleEvents = value;
+    },
+    get handleEvents() {
+        return this._handleEvents;
+    },
+    set handleEvents(value) {
+        this._handleEvents = value;
     },
 
+    //Render current song
     loadCurrentSong: function () {
-
         heading.textContent = this.currentSong.name;
         cdThump.style.backgroundImage = `url(${this.currentSong.image})`;
         audio.src = this.currentSong.path;
     },
     // Get current song when page is reloaded
     // getCurrentSong: function () {
-    //     return this.songs[this.curentIndex];
+    //     return this.songs[this.currentIndex];
     // },
+
+    // Skip to next song
+    nextSong: function () {
+        this.currentIndex++;
+        if (this.currentIndex >= this.songs.length) {
+            this.currentIndex = 0;
+        }
+        this.loadCurrentSong();
+    },
+    // Skip to prev song
+    prevSong: function () {
+        this.currentIndex--;
+        if (this.currentIndex < 0) {
+            this.currentIndex = this.songs.length - 1;
+        }
+        this.loadCurrentSong();
+    },
+    //Random button
+    playRandomSong: function () {
+        let newIndex;
+        do {
+            newIndex = Math.floor(Math.random() * this.songs.length);
+        } while (newIndex === this.currentIndex)
+        this.currentIndex = newIndex;
+        this.loadCurrentSong();
+    },
 
     start: function () {
         this.defineProperties();    // define properties getter for current song
         this.handleEvents();    // handle events (DOM events)
-        // console.log(this.getCurrentSong());
 
         this.loadCurrentSong(); // Load the first song infor into UI
 
