@@ -22,6 +22,8 @@ const playBtn = $('.btn-toggle-play');
 const nextBtn = $('.btn-next');
 const prevBtn = $('.btn-prev');
 const randomBtn = $('.btn-random');
+const repeatBtn = $('.btn-repeat');
+const playList = $('.playlist');
 //Using div block
 // const progressArea = $('.progress-area'); 
 // const progressBar = $('.progress-bar');
@@ -33,6 +35,7 @@ const app = {
     currentIndex: 0,
     isPlaying: false,
     isRandom: false,
+    isRepeat: false,
     songs: [
         {
             name: 'Save',
@@ -98,11 +101,10 @@ const app = {
 
     //Render song to playlist
     render: function () {
-        var hmtls = this.songs.map(function (song) {
+        const htmls = this.songs.map((song, index) => {
             return `
-             <div class="song">
-                 <div class="thumb"
-                     style="background-image: url('${song.image}')">
+             <div class="song ${index === this.currentIndex ? 'active' : ''}" data-index= "${index}">
+                 <div class="thumb" style="background-image: url('${song.image}')">
                  </div>
                  <div class="body">
                      <h3 class="title">${song.name}</h3>
@@ -114,7 +116,7 @@ const app = {
              </div>
              `;
         })
-        $('.playlist').innerHTML = hmtls.join('');
+        playList.innerHTML = htmls.join('');
     },
 
     defineProperties: function () {
@@ -124,7 +126,7 @@ const app = {
             },
         });
     },
-    _handleEvents: function () {
+    handleEvents: function () {
         const _this = this; //assign _this equal to this(app)
         const cdWidth = $('.cd').offsetWidth;
 
@@ -207,8 +209,10 @@ const app = {
             nextBtn.classList.add('active');
             setTimeout(function () {
                 nextBtn.classList.remove('active');
-            }, 300);
+            }, 100);
             audio.play();
+            _this.render();
+            _this.scrollToActiveSong();
         };
         //Handle events when click prev button
         prevBtn.onclick = function () {
@@ -220,8 +224,10 @@ const app = {
             prevBtn.classList.add('active');
             setTimeout(function () {
                 prevBtn.classList.remove('active');
-            }, 300);
+            }, 100);
             audio.play();
+            _this.render();
+            _this.scrollToActiveSong();
         };
         //Handle events when click random button
         randomBtn.onclick = function () {
@@ -237,26 +243,39 @@ const app = {
             _this.isRandom = !_this.isRandom;
             randomBtn.classList.toggle('active', _this.isRandom);
         };
+        //Handle events when click repeat button
+        repeatBtn.onclick = function () {
+            _this.isRepeat = !_this.isRepeat;
+            repeatBtn.classList.toggle('active', _this.isRepeat);
+        }
+        //Handle song playlist click events
+        playList.onclick = function (e) {
+            const songNode =e.target.closest('.song:not(.active)');
+            if (songNode ||
+                e.target.closest('.option')) { //If it doesn't have active or have option then run
+
+                if(songNode) {
+                    // songNode.getAttribute('data-index') //slt 1
+                    // songNode.dataset.index //slt 2 .//dataset.index return string
+                    _this.currentIndex = Number(songNode.dataset.index);
+                    _this.loadCurrentSong();
+                    _this.render();
+                    audio.play();
+                }
+            }
+        };
         //Handle events when the song ended
         audio.onended = function () {
             //Solution 1: Write another function to assign to the nextBtn.onclick event
             //Then call that fucntion right here
-            //Soltion 2
-            nextBtn.click();//Auto click when the song ends
+            if (_this.isRepeat) {
+                _this.repeatSong();
+            } else {
+                //Soltion 2
+                nextBtn.click();//Auto click when the song ends
+            }
         };
 
-    },
-    get handleEvents_1() {
-        return this._handleEvents;
-    },
-    set handleEvents_1(value) {
-        this._handleEvents = value;
-    },
-    get handleEvents() {
-        return this._handleEvents;
-    },
-    set handleEvents(value) {
-        this._handleEvents = value;
     },
 
     //Render current song
@@ -294,6 +313,41 @@ const app = {
         } while (newIndex === this.currentIndex)
         this.currentIndex = newIndex;
         this.loadCurrentSong();
+    },
+    //Repeat song
+    repeatSong: function () {
+        audio.play();// Play the current song again
+    },
+
+    //Scroll active song into view
+    scrollToActiveSong: function () {
+        //Solution 1
+        let viewRange = '';
+        if (this.currentIndex === 0) {
+            viewRange = 'end';
+        } else {
+            viewRange = 'center'
+        }
+        setTimeout(() => {
+            $('.song.active').scrollIntoView({
+                behavior: "smooth", block: viewRange
+            })
+        }, 100)
+        //Solution 2
+        // if(this.currentIndex === 0) {
+        //     setTimeout(() => {
+        //         $('.song.active').scrollIntoView({
+        //             behavior: "smooth", block: "end" 
+        //         })
+        //     }, 100)
+        // }
+        // else {
+        //     setTimeout(() => {
+        //         $('.song.active').scrollIntoView({
+        //             behavior: "smooth", block: "center" 
+        //         })
+        //     }, 100)
+        // }
     },
 
     start: function () {
